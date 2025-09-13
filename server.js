@@ -23,10 +23,13 @@ const DB_PATH = path.join(__dirname, "database.sqlite");
 const db = new Database(DB_PATH);
     db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
-        email TEXT PRIMARY KEY,
+        email TEXT,
+        deviceId TEXT,
+        appId TEXT,
         active INTEGER DEFAULT 0,
         expiresAt TEXT,
-        lastRef TEXT
+        lastRef TEXT,
+        PRIMARY KEY(email, deviceId, appId)
       )
     `).run();
   
@@ -38,11 +41,11 @@ app.get("/health", (req, res) => {
 
 // Check subscription status
 app.get("/status", (req, res) => {
-  const { email } = req.query;
-  if (!email) return res.status(400).json({ error: "email required" });
+  const { email, deviceTd, appId } = req.query;
+  if (!email || !deviceTd || !appId) return res.status(400).json({ error: "email, deviceId, appId required" });
 
-  const key = email.toLowerCase();
-  const row = db.prepare("SELECT * FROM users WHERE email = ?").get(key);
+  const key = [email.toLowerCase(), deviceTd, appId];
+  const row = db.prepare("SELECT * FROM users WHERE email = ? AND deviceId=? AND appId=?").get(key);
 
     if (row && row.active && new Date(row.expiresAt) > new Date()) {
       return res.json({ active: true, expiresAt: row.expiresAt });
@@ -53,13 +56,13 @@ app.get("/status", (req, res) => {
 
 // Start payment
 app.post("/pay", async (req, res) => {
-  const { email } = req.body;
-  if (!email) return res.status(400).json({ error: "email is required" });
+  const { email, deviceTd, appId } = req.body;
+  if (!email || !deviceTd || !appId) return res.status(400).json({ error: "email, deviceId, appId is required" });
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: "PAYSTACK_SECRET Missing" });
   if (!BASE_URL) return res.status(500).json({ error: "BASE_URL Missing" });
 
-  const key = email.toLowerCase();
-  const row = db.prepare("SELECT * FROM users WHERE email = ?").get(key);
+  const key = [email.toLowerCase(), deviceTd, appId];
+  const row = db.prepare("SELECT * FROM users WHERE email = ? AND deviceId=? AND appId=?").get(key);
 
     if (row && row.active && new Date(row.expiresAt) > new Date()) {
       return res.status(409).json({ error: "already_active", expiresAt: row.expiresAt });
@@ -72,7 +75,7 @@ app.post("/pay", async (req, res) => {
         {
           email,
           amount: SUBSCRIPTION_AMOUNT * 100,
-          metadata: { email, app: "joki" },
+          metadata: { email, deviceTd, appId, app: "joki" },
           callback_url: callbackUrl,
         },
         {
@@ -90,7 +93,7 @@ app.post("/pay", async (req, res) => {
 
       // Save pending transaction with NULL expiry
       db.prepare(
-        "INSERT OR REPLACE INTO users (email, active, expiresAt, lastRef) VALUES (?, ?, ?, ?)"
+        "INSERT OR REPLACE INTO users (email, deviceId, appId, active, expiresAt, lastRef) VALUES (?, ?, ?, ?, ?, ?)"
       ).run(key, 0, null, data.reference);
       
 
@@ -123,13 +126,16 @@ app.get("/paystack/callback", async (req, res) => {
     let status = "failed";
     if (data.status === "success") {
       const email = data.metadata?.email?.toLowerCase();
-      if (email) {
+      const deviceId = data.metadata?.deviceId;
+      const appId = data.metadata?.appId;
+
+      if (email && deviceId && appId) {
         const expires = new Date();
         expires.setDate(expires.getDate() + SUBSCRIPTION_DAYS);
         const expiresAt = expires.toISOString();
 
         db.prepare(
-          "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ?"
+          "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
         ).run(1, expiresAt, reference, email);
       }
       status = "success";
@@ -158,14 +164,17 @@ app.get("/verify/:reference", async (req, res) => {
     if (data?.amount !== SUBSCRIPTION_AMOUNT * 100) return res.json({ ok: false, error: "amount_mismatch" });
 
     const email = data.metadata?.email?.toLowerCase();
-    if (!email) return res.json({ ok: false, error: "no_email" });
+    const deviceId = data.metadata?.deviceId;
+    const appId = data.metadata?.appId;
+
+    if (!email || !deviceId || !appId) return res.json({ ok: false, error: "no_email, no_deviceId, no_appId" });
 
     const expires = new Date();
     expires.setDate(expires.getDate() + SUBSCRIPTION_DAYS);
     const expiresAt = expires.toISOString();
 
     db.prepare(
-      "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ?"
+      "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
     ).run(1, expiresAt, reference, email);
     
 
@@ -190,13 +199,15 @@ app.post("/webhook/paystack", (req, res) => {
   if (event.event === "charge.success") {
     const reference = event.data.reference;
     const email = event.data.metadata?.email?.toLowerCase();
-    if (email) {
+    const deviceId = event.data.metadata?.deviceId;
+    const appId = event.data.metadata?.appId;
+    if (email && deviceId && appId) {
       const expires = new Date();
       expires.setDate(expires.getDate() + SUBSCRIPTION_DAYS);
       const expiresAt = expires.toISOString();
 
       db.prepare(
-        "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ?"
+        "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
       ).run(1, expiresAt, reference, email);
       
     }
