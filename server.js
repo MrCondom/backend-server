@@ -16,7 +16,8 @@ const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET;
 const APP_SCHEME = process.env.APP_SCHEME || "joki";
 const BASE_URL = process.env.BASE_URL;
 const SUBSCRIPTION_DAYS = parseInt(process.env.SUBSCRIPTION_DAYS || "30");
-const SUBSCRIPTION_AMOUNT = parseInt(process.env.SUBSCRIPTION_AMOUNT || "5000");
+const SUBSCRIPTION_AMOUNT = parseInt((process.env.SUBSCRIPTION_AMOUNT || "5000").trim(), 10);
+console.log("Amount sent to paystack", SUBSCRIPTION_AMOUNT * 100);
 
 // --- SQLite Database Setup ---
 const DB_PATH = path.join(__dirname, "database.sqlite");
@@ -76,13 +77,13 @@ app.post("/pay", async (req, res) => {
       const callbackUrl = `${BASE_URL}/paystack/callback`;
       const init = await axios.post(
         "https://api.paystack.co/transaction/initialize",
-        console.log("Sending to paystack",
+        
         {
           email,
           amount: SUBSCRIPTION_AMOUNT * 100,
           metadata: { email, deviceId, appId, app: "joki" },
           callback_url: callbackUrl,
-        }),
+        },
         {
           headers: {
             Authorization: `Bearer ${PAYSTACK_SECRET}`,
