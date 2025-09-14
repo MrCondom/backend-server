@@ -23,15 +23,26 @@ const DB_PATH = path.join(__dirname, "database.sqlite");
 const db = new Database(DB_PATH);
     db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
-        email TEXT,
-        deviceId TEXT,
-        appId TEXT,
+        email TEXT PRIMARY KEY,
         active INTEGER DEFAULT 0,
         expiresAt TEXT,
-        lastRef TEXT,
-        PRIMARY KEY(email, deviceId, appId)
+        lastRef TEXT
       )
     `).run();
+
+    function addColumnIfMissing (table, column, type) {
+      const pragma = db.prepare (`PRAGMA table_info(${table})`).all();
+      const exists = pragma.some(col => col.name === column);
+
+      if (!exist) {
+        db.prepare (` ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
+        console.log (`Added missing column: ${column}`);
+
+      }
+    }
+
+    addColumnIfMissing("users", "deviceId", "TEXT");
+    addColumnIfMissing("users", "appId", "TEXT");
   
 
 // Health Check
