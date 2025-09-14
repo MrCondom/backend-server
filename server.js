@@ -79,8 +79,8 @@ app.post("/pay", async (req, res) => {
         console.log("Sending to paystack",
         {
           email,
-          amount: Number(SUBSCRIPTION_AMOUNT) * 100,
-          metadata: JSON.stringify ({ email, deviceId, appId, app: "joki" }),
+          amount: SUBSCRIPTION_AMOUNT * 100,
+          metadata: { email, deviceId, appId, app: "joki" },
           callback_url: callbackUrl,
         }),
         {
