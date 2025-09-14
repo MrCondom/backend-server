@@ -85,8 +85,8 @@ app.post("/pay", async (req, res) => {
         "https://api.paystack.co/transaction/initialize",
         {
           email,
-          amount: SUBSCRIPTION_AMOUNT * 100,
-          metadata: { email, deviceId, appId, app: "joki" },
+          amount: Number(SUBSCRIPTION_AMOUNT) * 100,
+          metadata: JSON.stringify ({ email, deviceId, appId, app: "joki" }),
           callback_url: callbackUrl,
         },
         {
