@@ -21,30 +21,48 @@ const SUBSCRIPTION_AMOUNT = parseInt(process.env.SUBSCRIPTION_AMOUNT || "5000");
 // --- SQLite Database Setup ---
 const DB_PATH = path.join(__dirname, "database.sqlite");
 const db = new Database(DB_PATH);
+
+function  getColumns(table) {
+  try {
+    return db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
+  } catch (e) {
+    return[];
+  }
+}
+
+  const requiredColumns = [
+    "email",
+    "deviceId",
+    "appId",
+    "active",
+    "expiresAt",
+    "lastRef",
+  ];
+
+  let existing = getColumns("users");
+  const missing = requiredColumns.filter(c => !existing.includes(c));
+
+  if (existing.length === 0 || missing.length > 0) {
+    console.log("Rebuilding users table");
+
     db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
-        email TEXT PRIMARY KEY,
+        email TEXT,
+        deviceId TEXT,
+        appId TEXT,
         active INTEGER DEFAULT 0,
         expiresAt TEXT,
-        lastRef TEXT
+        lastRef TEXT,
+        PRIMARY KEY (email, deviceId, appId)
       )
     `).run();
 
-    function addColumnIfMissing (table, column, type) {
-      const pragma = db.prepare (`PRAGMA table_info(${table})`).all();
-      const exists = pragma.some(col => col.name === column);
+    console.log("Users table created with correct schema");
+  } else {
+    console.log("Users table is already up to date")
+  }
 
-      if (!exists) {
-        db.prepare (` ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
-        console.log (`Added missing column: ${column}`);
-
-      }
-    }
-
-    addColumnIfMissing("users", "deviceId", "TEXT");
-    addColumnIfMissing("users", "appId", "TEXT");
-  
-
+    
 // Health Check
 app.get("/health", (req, res) => {
   res.json({ ok: true, ts: new Date().toISOString() });
