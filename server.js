@@ -83,12 +83,13 @@ app.post("/pay", async (req, res) => {
       const callbackUrl = `${BASE_URL}/paystack/callback`;
       const init = await axios.post(
         "https://api.paystack.co/transaction/initialize",
+        console.log("Sending to paystack",
         {
           email,
           amount: Number(SUBSCRIPTION_AMOUNT) * 100,
           metadata: JSON.stringify ({ email, deviceId, appId, app: "joki" }),
           callback_url: callbackUrl,
-        },
+        }),
         {
           headers: {
             Authorization: `Bearer ${PAYSTACK_SECRET}`,
