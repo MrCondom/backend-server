@@ -41,10 +41,10 @@ app.get("/health", (req, res) => {
 
 // Check subscription status
 app.get("/status", (req, res) => {
-  const { email, deviceTd, appId } = req.query;
-  if (!email || !deviceTd || !appId) return res.status(400).json({ error: "email, deviceId, appId required" });
+  const { email, deviceId, appId } = req.query;
+  if (!email || !deviceId || !appId) return res.status(400).json({ error: "email, deviceId, appId required" });
 
-  const key = [email.toLowerCase(), deviceTd, appId];
+  const key = [email.toLowerCase(), deviceId, appId];
   const row = db.prepare("SELECT * FROM users WHERE email = ? AND deviceId=? AND appId=?").get(key);
 
     if (row && row.active && new Date(row.expiresAt) > new Date()) {
@@ -56,12 +56,12 @@ app.get("/status", (req, res) => {
 
 // Start payment
 app.post("/pay", async (req, res) => {
-  const { email, deviceTd, appId } = req.body;
-  if (!email || !deviceTd || !appId) return res.status(400).json({ error: "email, deviceId, appId is required" });
+  const { email, deviceId, appId } = req.body;
+  if (!email || !deviceId || !appId) return res.status(400).json({ error: "email, deviceId, appId is required" });
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: "PAYSTACK_SECRET Missing" });
   if (!BASE_URL) return res.status(500).json({ error: "BASE_URL Missing" });
 
-  const key = [email.toLowerCase(), deviceTd, appId];
+  const key = [email.toLowerCase(), deviceId, appId];
   const row = db.prepare("SELECT * FROM users WHERE email = ? AND deviceId=? AND appId=?").get(key);
 
     if (row && row.active && new Date(row.expiresAt) > new Date()) {
@@ -75,7 +75,7 @@ app.post("/pay", async (req, res) => {
         {
           email,
           amount: SUBSCRIPTION_AMOUNT * 100,
-          metadata: { email, deviceTd, appId, app: "joki" },
+          metadata: { email, deviceId, appId, app: "joki" },
           callback_url: callbackUrl,
         },
         {
@@ -136,7 +136,7 @@ app.get("/paystack/callback", async (req, res) => {
 
         db.prepare(
           "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
-        ).run(1, expiresAt, reference, email);
+        ).run(1, expiresAt, reference, email, deviceId, appId);
       }
       status = "success";
     }
@@ -175,7 +175,7 @@ app.get("/verify/:reference", async (req, res) => {
 
     db.prepare(
       "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
-    ).run(1, expiresAt, reference, email);
+    ).run(1, expiresAt, reference, email, deviceId, appId);
     
 
     return res.json({ ok: true, expiresAt });
@@ -208,7 +208,7 @@ app.post("/webhook/paystack", (req, res) => {
 
       db.prepare(
         "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
-      ).run(1, expiresAt, reference, email);
+      ).run(1, expiresAt, reference, email, deviceId, appId);
       
     }
   }
