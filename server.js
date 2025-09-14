@@ -94,7 +94,7 @@ app.post("/pay", async (req, res) => {
       // Save pending transaction with NULL expiry
       db.prepare(
         "INSERT OR REPLACE INTO users (email, deviceId, appId, active, expiresAt, lastRef) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(key, 0, null, data.reference);
+      ).run(email.toLowerCase(), deviceId, appId, key, 0, null, data.reference);
       
 
       return res.json({
@@ -136,7 +136,7 @@ app.get("/paystack/callback", async (req, res) => {
 
         db.prepare(
           "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
-        ).run(1, expiresAt, reference, email, deviceId, appId);
+        ).run(1, expiresAt, reference, email.toLowerCase(), deviceId, appId);
       }
       status = "success";
     }
