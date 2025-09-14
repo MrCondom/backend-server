@@ -34,7 +34,7 @@ const db = new Database(DB_PATH);
       const pragma = db.prepare (`PRAGMA table_info(${table})`).all();
       const exists = pragma.some(col => col.name === column);
 
-      if (!exist) {
+      if (!exists) {
         db.prepare (` ALTER TABLE ${table} ADD COLUMN ${column} ${type}`).run();
         console.log (`Added missing column: ${column}`);
 
