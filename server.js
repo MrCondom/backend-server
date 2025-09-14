@@ -100,7 +100,7 @@ app.post("/pay", async (req, res) => {
       // Save pending transaction with NULL expiry
       db.prepare(
         "INSERT OR REPLACE INTO users (email, deviceId, appId, active, expiresAt, lastRef) VALUES (?, ?, ?, ?, ?, ?)"
-      ).run(email.toLowerCase(), deviceId, appId, key, 0, null, data.reference);
+      ).run(email.toLowerCase(), deviceId, appId, 0, null, data.reference);
       
 
       return res.json({
