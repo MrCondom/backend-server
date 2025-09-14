@@ -22,28 +22,7 @@ const SUBSCRIPTION_AMOUNT = parseInt(process.env.SUBSCRIPTION_AMOUNT || "5000");
 const DB_PATH = path.join(__dirname, "database.sqlite");
 const db = new Database(DB_PATH);
 
-function  getColumns(table) {
-  try {
-    return db.prepare(`PRAGMA table_info(${table})`).all().map(c => c.name);
-  } catch (e) {
-    return[];
-  }
-}
 
-  const requiredColumns = [
-    "email",
-    "deviceId",
-    "appId",
-    "active",
-    "expiresAt",
-    "lastRef",
-  ];
-
-  let existing = getColumns("users");
-  const missing = requiredColumns.filter(c => !existing.includes(c));
-
-  if (existing.length === 0 || missing.length > 0) {
-    console.log("Rebuilding users table");
 
     db.prepare(`
       CREATE TABLE IF NOT EXISTS users (
@@ -57,10 +36,6 @@ function  getColumns(table) {
       )
     `).run();
 
-    console.log("Users table created with correct schema");
-  } else {
-    console.log("Users table is already up to date")
-  }
 
     
 // Health Check
