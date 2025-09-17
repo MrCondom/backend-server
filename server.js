@@ -62,6 +62,7 @@ app.get("/status", (req, res) => {
 // Start payment
 app.post("/pay", async (req, res) => {
   const { email, deviceId, appId } = req.body;
+  console.log ("Payment Init Request", {email, deviceId, appId});
   if (!email || !deviceId || !appId) return res.status(400).json({ error: "email, deviceId, appId is required" });
   if (!PAYSTACK_SECRET) return res.status(500).json({ error: "PAYSTACK_SECRET Missing" });
   if (!BASE_URL) return res.status(500).json({ error: "BASE_URL Missing" });
@@ -135,6 +136,8 @@ app.get("/paystack/callback", async (req, res) => {
       const deviceId = data.metadata?.deviceId;
       const appId = data.metadata?.appId;
 
+      console.log("Callback Success", {email, deviceId, appId});
+
       if (email && deviceId && appId) {
         const expires = new Date();
         expires.setDate(expires.getDate() + SUBSCRIPTION_DAYS);
@@ -173,6 +176,8 @@ app.get("/verify/:reference", async (req, res) => {
     const deviceId = data.metadata?.deviceId;
     const appId = data.metadata?.appId;
 
+    console.log("Verify route", {email, deviceId, appId, reference});
+
     if (!email || !deviceId || !appId) return res.json({ ok: false, error: "no_email, no_deviceId, no_appId" });
 
     const expires = new Date();
@@ -207,6 +212,9 @@ app.post("/webhook/paystack", (req, res) => {
     const email = event.data.metadata?.email?.toLowerCase();
     const deviceId = event.data.metadata?.deviceId;
     const appId = event.data.metadata?.appId;
+
+    console.log("Webhook charge success", {email, deviceId, appId, reference});
+
     if (email && deviceId && appId) {
       const expires = new Date();
       expires.setDate(expires.getDate() + SUBSCRIPTION_DAYS);
@@ -215,6 +223,8 @@ app.post("/webhook/paystack", (req, res) => {
       db.prepare(
         "UPDATE users SET active = ?, expiresAt = ?, lastRef = ? WHERE email = ? AND deviceId=? AND appId=?"
       ).run(1, expiresAt, reference, email, deviceId, appId);
+
+      console.log("DB Updated", {email, deviceId, appId, expiresAt, reference});
       
     }
   }
